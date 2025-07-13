@@ -1,0 +1,45 @@
+.color-primary {
+    color: #E65100;
+}
+
+.bg-primary {
+    background-color: #E65100;
+}
+
+html,
+body,
+#root {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+html {
+    font-family: "Quicksand", "Noto Sans", "Segoe UI", "PingFang SC", "Hiragino Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+button {
+    background-color: #E65100;
+    border: solid 2px #E65100;
+    padding: 4px 12px;
+    border-radius: 5px;
+    box-shadow: none;
+    color: white;
+    background-image: none;
+    outline: none;
+}
+
+button:focus {
+    border-color: #e6a17c;
+}
+
+button:active {
+    transform: scale(0.97);
+}

@@ -1,0 +1,25 @@
+.selected {
+    background-color: #E6510066;
+}
+
+.icon {
+    width: 40px;
+    height: 40px;
+}
+
+.installed-version {
+    display: flex;
+    flex-direction: row;
+
+    &>span {
+        background-color: #009688;
+        color: white;
+        display: block;
+        width: auto;
+        font-size: 12px;
+        line-height: 10px;
+        padding: 2px 4px;
+        margin: 1px 0;
+        border-radius: 6px;
+    }
+}
