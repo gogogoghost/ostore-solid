@@ -1,6 +1,6 @@
 # OStore-Solid
 
-Orange app store for kaios 3.1
+Orange app store for KaiOS 3.1
 
 This app is built into the system image of [nokia 2780 flip](https://github.com/gogogoghost/nokia-2780-flip-jailbreak-tutorial).
 
