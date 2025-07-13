@@ -1,36 +1,34 @@
-## Usage
+# OStore-Solid
 
-Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
+Orange app store for kaios 3.1
 
-This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
+This app is built into the system image of [nokia 2780 flip](https://github.com/gogogoghost/nokia-2780-flip-jailbreak-tutorial).
 
-```bash
-$ npm install # or pnpm install or yarn install
-```
+## Screenshots
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+![](imgs/screenshot1.png)
+![](imgs/screenshot2.png)
+![](imgs/screenshot3.png)
 
-## Available Scripts
+## Where are the apps from?
 
-In the project directory, you can run:
+- My porting and packaging
+- Uploads by authors
 
-### `npm run dev` or `npm start`
+## How to upload your app
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+OStore has an api to publish your newest version.
 
-The page will reload if you make edits.<br>
+https://api-ostore.yexm.eu.org/publish
 
-### `npm run build`
+POST multipart/form-data
 
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
+| Field | Type   | Description          |
+|-------|--------|----------------------|
+| id    | string | App's ID             |
+| file  | file   | Zip File             |
+| sign  | file   | The ED25519 signature binary of the ZIP file  |
 
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
+But for the first version you have to send the zip file and the DER format ed25519 public key to my email: **jaxyang39@gmail.com**.
 
-## Deployment
-
-You can deploy the `dist` folder to any static host provider (netlify, surge, now, etc.)
-
-## This project was created with the [Solid CLI](https://github.com/solidjs-community/solid-cli)
+I will publish your first version and then you can upgrade by yourself.
