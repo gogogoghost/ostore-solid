@@ -7,7 +7,7 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   publish:
@@ -33,6 +33,19 @@ jobs:
           export VITE_APP_VERSION="${GITHUB_REF_NAME#v}"
           ./build.sh
           jq -e --arg v "$VITE_APP_VERSION" '.b2g_features.version == $v' dist/manifest.webmanifest
+
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          # Idempotent, so re-running after a failed store publish works.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/ostore.zip --clobber
+          else
+            gh release create "$tag" dist/ostore.zip --title "$tag" --notes "$tag"
+          fi
 
       - name: Publish
         env:
