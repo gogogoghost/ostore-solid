@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          # Static config comes from .env.example; the release version is the tag.
+          # Vite prefers VITE_* variables from the environment over .env files.
+          cp .env.example .env.production
+          export VITE_APP_VERSION="${GITHUB_REF_NAME#v}"
+          bun run build
+          jq -e --arg v "$VITE_APP_VERSION" '.b2g_features.version == $v' dist/manifest.webmanifest
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          cd dist
+          zip -r ostore.zip *
+
+      - name: Sign
+        env:
+          OSTORE_SIGNING_KEY: ${{ secrets.OSTORE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$OSTORE_SIGNING_KEY" | tr -d '\r' > "$RUNNER_TEMP/ostore.key"
+          chmod 600 "$RUNNER_TEMP/ostore.key"
+          openssl pkeyutl -sign -inkey "$RUNNER_TEMP/ostore.key" \
+            -in dist/ostore.zip -out "$RUNNER_TEMP/ostore.sign.bin"
+
+      - name: Publish
+        run: |
+          set -euo pipefail
+          curl -fsS --fail-with-body -X POST https://api-ostore.yexm.eu.org/publish \
+            -F "file=@dist/ostore.zip" \
+            -F "sign=@$RUNNER_TEMP/ostore.sign.bin" \
+            -F "id=ostore"
