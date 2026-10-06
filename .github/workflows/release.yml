@@ -28,20 +28,13 @@ jobs:
       - name: Build
         run: |
           set -euo pipefail
-          # Static config comes from .env.example; the release version is the tag.
-          # Vite prefers VITE_* variables from the environment over .env files.
-          cp .env.example .env.production
+          # The release version is the tag; Vite prefers VITE_* variables from
+          # the environment over the values in .env.production.
           export VITE_APP_VERSION="${GITHUB_REF_NAME#v}"
-          bun run build
+          ./build.sh
           jq -e --arg v "$VITE_APP_VERSION" '.b2g_features.version == $v' dist/manifest.webmanifest
 
-      - name: Package
-        run: |
-          set -euo pipefail
-          cd dist
-          zip -r ostore.zip *
-
-      - name: Sign
+      - name: Publish
         env:
           OSTORE_SIGNING_KEY: ${{ secrets.OSTORE_SIGNING_KEY }}
         run: |
@@ -50,30 +43,5 @@ jobs:
             echo "::error::OSTORE_SIGNING_KEY is empty - add it as a secret of the 'release' environment (or of the repository)"
             exit 1
           fi
-          printf '%s\n' "$OSTORE_SIGNING_KEY" \
-            | tr -d '\r' \
-            | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' \
-            > "$RUNNER_TEMP/ostore.key"
-          chmod 600 "$RUNNER_TEMP/ostore.key"
-          key_type=$(openssl pkey -in "$RUNNER_TEMP/ostore.key" -noout -text 2>/dev/null | sed -n '1p' || true)
-          echo "signing key: $(wc -l < "$RUNNER_TEMP/ostore.key") lines, type '${key_type:-unreadable}'"
-          if [ -z "$key_type" ]; then
-            echo "::error::OSTORE_SIGNING_KEY does not contain a readable private key PEM"
-            exit 1
-          fi
-          if ! echo "$key_type" | grep -qi "^ED25519"; then
-            echo "::error::OSTORE_SIGNING_KEY must hold an ED25519 private key (got '$key_type')"
-            exit 1
-          fi
-          # OpenSSL 3.0 needs -rawin to sign a whole file with Ed25519 (3.5 implies it);
-          # both produce the same pure Ed25519 signature over the archive bytes.
-          openssl pkeyutl -sign -rawin -inkey "$RUNNER_TEMP/ostore.key" \
-            -in dist/ostore.zip -out "$RUNNER_TEMP/ostore.sign.bin"
-
-      - name: Publish
-        run: |
-          set -euo pipefail
-          curl -sS --fail-with-body -X POST https://api-ostore.yexm.eu.org/publish \
-            -F "file=@dist/ostore.zip" \
-            -F "sign=@$RUNNER_TEMP/ostore.sign.bin" \
-            -F "id=ostore"
+          printf '%s\n' "$OSTORE_SIGNING_KEY" > "$RUNNER_TEMP/ostore.key"
+          PRIVATE_PEM_PATH="$RUNNER_TEMP/ostore.key" ./publish.sh
