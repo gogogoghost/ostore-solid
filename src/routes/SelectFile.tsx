@@ -7,7 +7,7 @@ import styles from './SelectFile.module.scss'
 import cogBox from '../assets/cog-box.svg'
 import { Direction, LinearFocusManager } from "../libs/LinearFocusManager"
 import { filterZip, saveFile } from '../libs/utils'
-import { install } from '../api/api'
+import { install } from '../api'
 
 export default () => {
 

@@ -6,6 +6,7 @@ import { Router, Route } from "@solidjs/router";
 
 import Index from './routes/Index'
 import { updateInstalledAppList } from "./store";
+import { detectBackend } from "./api";
 import SelectFile from "./routes/SelectFile";
 
 const root = document.getElementById('root');
@@ -16,7 +17,7 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   );
 }
 
-updateInstalledAppList();
+detectBackend().then(updateInstalledAppList);
 
 render(() => {
   document.addEventListener('keydown', (evt) => {

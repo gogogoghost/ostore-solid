@@ -74,3 +74,34 @@ export async function uninstall(manifestUrl) {
     }
     return res.data
 }
+
+// --- installed app content (the HTTP proxy of the legacy appscmd daemon) ---
+
+function proxyUrl(origin, path) {
+    const host = String(origin).replace(/^https?:\/\//, '').replace(/\/+$/, '')
+    const suffix = path.startsWith('/') ? path : '/' + path
+    return proxyBaseUrl + host + suffix
+}
+
+export async function getAppFile(origin, path) {
+    const res = await fetch(proxyUrl(origin, path))
+    if (!res.ok) {
+        throw new Error("HTTP " + res.status)
+    }
+    return new Uint8Array(await res.arrayBuffer())
+}
+
+export async function getAppManifest(origin) {
+    for (const name of ['manifest.webmanifest', 'manifest.webapp']) {
+        try {
+            const res = await fetch(proxyUrl(origin, '/' + name))
+            if (!res.ok) {
+                continue
+            }
+            return await res.json()
+        } catch (e) {
+            // try the next manifest name
+        }
+    }
+    throw new Error("unable to read manifest of " + origin)
+}

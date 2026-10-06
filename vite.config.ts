@@ -50,6 +50,9 @@ export default defineConfig(({ mode }) => {
             permissions: {
               "device-storage:sdcard": { access: "readwrite" },
               "systemXHR": {},
+              // App management through the Sideload remote service (systems
+              // without the Sideload patch ignore the unknown permission).
+              "sideload": {},
             },
             version: env.VITE_APP_VERSION,
             origin: "ostore"
@@ -74,6 +77,11 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       target: 'esnext',
+      // OSTORE_DEBUG=1 keeps readable identifiers and emits source maps, so
+      // errors reported by the device log show real names instead of minified
+      // ones.
+      minify: process.env.OSTORE_DEBUG ? false : 'esbuild',
+      sourcemap: process.env.OSTORE_DEBUG ? true : false,
     },
   }
 });

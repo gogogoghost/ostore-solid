@@ -2,7 +2,7 @@ import { createSignal, onCleanup, onMount } from 'solid-js'
 import sytles from './Manual.module.scss'
 import { register, unregister } from '../libs/KeyEventManager'
 import { LinearFocusManager, Direction } from '../libs/LinearFocusManager'
-import { installPWA } from '../api/api'
+import { installPWA } from '../api'
 import { useNavigate } from '@solidjs/router'
 
 export default () => {

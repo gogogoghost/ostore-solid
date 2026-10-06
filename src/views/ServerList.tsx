@@ -2,7 +2,7 @@ import { createEffect, createMemo, createSignal, For, Index, Match, on, onCleanu
 import SoftKey from "../components/SoftKey"
 import Loading from "../components/Loading"
 import AppItem from "../components/AppItem"
-import { getAllList, getPopularList, install, resourceUrl, uninstall } from '../api/api';
+import { getAllList, getPopularList, install, resourceUrl, uninstall } from '../api';
 import { installedAppList, updateInstalledAppList } from "../store";
 import { register, unregister } from "../libs/KeyEventManager";
 import Dialog from "../components/Dialog";
@@ -66,8 +66,8 @@ export default (props) => {
     })
 
     const compareVersions = (version1, version2) => {
-        const v1 = version1.split('.').map(Number);
-        const v2 = version2.split('.').map(Number);
+        const v1 = String(version1 ?? '').split('.').map(Number);
+        const v2 = String(version2 ?? '').split('.').map(Number);
 
         for (let i = 0; i < 3; i++) {
             if (v1[i] > v2[i]) {
@@ -87,7 +87,9 @@ export default (props) => {
             const obj = installedAppList().find(o => o.name == item.id)
             if (obj) {
                 item.installedVersion = obj.version
-                item.versionState = compareVersions(item.version, obj.version)
+                item.versionState = (typeof item.version === 'string' && typeof obj.version === 'string')
+                    ? compareVersions(item.version, obj.version)
+                    : null
                 item.manifestUrl = obj.manifest_url
             } else {
                 item.installedVersion = null

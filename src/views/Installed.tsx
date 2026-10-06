@@ -4,7 +4,7 @@ import AppItem from "../components/AppItem"
 import SoftKey from "../components/SoftKey"
 import { installedAppList, updateInstalledAppList } from "../store"
 import { register, unregister } from "../libs/KeyEventManager"
-import { uninstall } from '../api/api'
+import { uninstall } from '../api'
 import { LinearFocusManager, Direction } from "../libs/LinearFocusManager"
 
 export default () => {
