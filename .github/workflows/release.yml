@@ -73,7 +73,7 @@ jobs:
       - name: Publish
         run: |
           set -euo pipefail
-          curl -fsS --fail-with-body -X POST https://api-ostore.yexm.eu.org/publish \
+          curl -sS --fail-with-body -X POST https://api-ostore.yexm.eu.org/publish \
             -F "file=@dist/ostore.zip" \
             -F "sign=@$RUNNER_TEMP/ostore.sign.bin" \
             -F "id=ostore"
