@@ -12,6 +12,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # The signing key is stored as a secret of the "release" environment.
+    # Environment secrets are only visible to jobs that declare the environment.
+    environment: release
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,8 +46,20 @@ jobs:
           OSTORE_SIGNING_KEY: ${{ secrets.OSTORE_SIGNING_KEY }}
         run: |
           set -euo pipefail
-          printf '%s\n' "$OSTORE_SIGNING_KEY" | tr -d '\r' > "$RUNNER_TEMP/ostore.key"
+          if [ -z "$OSTORE_SIGNING_KEY" ]; then
+            echo "::error::OSTORE_SIGNING_KEY is empty - add it as a secret of the 'release' environment (or of the repository)"
+            exit 1
+          fi
+          printf '%s\n' "$OSTORE_SIGNING_KEY" \
+            | tr -d '\r' \
+            | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' \
+            > "$RUNNER_TEMP/ostore.key"
           chmod 600 "$RUNNER_TEMP/ostore.key"
+          echo "signing key: $(wc -l < "$RUNNER_TEMP/ostore.key") lines, first line '$(head -n 1 "$RUNNER_TEMP/ostore.key")'"
+          if ! openssl pkey -in "$RUNNER_TEMP/ostore.key" -noout 2>/dev/null; then
+            echo "::error::OSTORE_SIGNING_KEY does not contain a readable private key PEM"
+            exit 1
+          fi
           openssl pkeyutl -sign -inkey "$RUNNER_TEMP/ostore.key" \
             -in dist/ostore.zip -out "$RUNNER_TEMP/ostore.sign.bin"
 
