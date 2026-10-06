@@ -1,5 +1,11 @@
 
 
+const DEVICE_STORAGE_NAME = "sdcard"
+
+export function getDeviceStorage() {
+    return navigator.b2g.getDeviceStorage(DEVICE_STORAGE_NAME)
+}
+
 export function addFileInternal(storage, blob, name) {
     return new Promise((resolve, reject) => {
         const req = storage.addNamed(blob, name)
@@ -20,7 +26,11 @@ export async function addFile(storage, blob, name) {
     while (true) {
         const realName = counter == 0 ? name : `${prefix}_${counter}.${suffix}`
         try {
-            return await addFileInternal(storage, blob, realName)
+            // addNamed resolves to a DOM path such as "/sdcard/tmp.zip", which
+            // cannot be used as a filesystem path. The name we requested is the
+            // path relative to the storage root, so return it instead.
+            await addFileInternal(storage, blob, realName)
+            return realName
         } catch (e) {
             if (e.message == "NoModificationAllowedError") {
                 counter++;
@@ -32,26 +42,23 @@ export async function addFile(storage, blob, name) {
     }
 }
 
-export function path2fileName(path) {
-    const i = path.lastIndexOf('/')
-    if (i < 0) {
-        return path
-    }
-    return path.substring(i + 1)
-}
-
 export async function saveFile(blob, fileName) {
-    const sdcard = navigator.b2g.getDeviceStorage("sdcard");
-    const filePath = await addFile(sdcard, blob, fileName)
-    const rootPath = (await sdcard.getRoot()).path
-    const fullPath = "/data" + rootPath + '/' + path2fileName(filePath)
-    return fullPath
+    const storage = getDeviceStorage()
+    const relativePath = await addFile(storage, blob, fileName)
+    // storagePath is the actual mount point of the storage area. Note that
+    // Directory.path from getRoot() is only a DOM path and must not be used
+    // to build a filesystem path.
+    const storagePath = storage.storagePath
+    if (!storagePath || storagePath === "unknown") {
+        throw new Error("unable to resolve device storage path: " + storagePath)
+    }
+    return storagePath.replace(/\/+$/, '') + '/' + relativePath
 }
 
 export async function filterZip() {
     const fileList = []
-    const sdcard = navigator.b2g.getDeviceStorage("sdcard");
-    var iterable = sdcard.enumerate();
+    const storage = getDeviceStorage()
+    var iterable = storage.enumerate();
     var files = iterable.values();
     while (true) {
         const file = await files.next();
