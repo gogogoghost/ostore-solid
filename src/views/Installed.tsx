@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, Index, Match, on, onCleanup, onMount, Switch } from "solid-js"
+import { createEffect, createMemo, createSignal, ErrorBoundary, For, Index, Match, on, onCleanup, onMount, Show, Switch } from "solid-js"
 import Loading from "../components/Loading"
 import AppItem from "../components/AppItem"
 import SoftKey from "../components/SoftKey"
@@ -20,6 +20,8 @@ export default () => {
         setCurrentIndex(index)
     })
 
+    // `defer: false` so the effect also runs when the list was already
+    // populated before this view mounted.
     createEffect(on(installedAppList, (val) => {
         setLoading(false)
         refs = []
@@ -27,7 +29,7 @@ export default () => {
         queueMicrotask(() => {
             focusManager.update(refs, currentIndex())
         })
-    }))
+    }, { defer: false }))
 
     const leftText = createMemo(() => {
         const o = appList()[currentIndex()]
@@ -99,15 +101,21 @@ export default () => {
                 </Match>
                 <Match when={!loading()}>
                     <div>
+                        <Show when={appList().length == 0}>
+                            <div class="p-[8px] text-[13px]">No applications found</div>
+                        </Show>
                         <For each={appList()}>
                             {(item, index) =>
-                                <AppItem
-                                    iconSrc={item.iconSrc}
-                                    name={item.name}
-                                    desc={item.manifestObj.description}
-                                    selected={currentIndex() == index()}
-                                    version={item.version}
-                                    ref={(el) => { refs[index()] = el }} />
+                                // One broken entry must not take the whole list down.
+                                <ErrorBoundary fallback={<div class="p-[4px] text-[13px]">{String(item?.name)}: failed to display</div>}>
+                                    <AppItem
+                                        iconSrc={item.iconSrc}
+                                        name={item.name}
+                                        desc={item.manifestObj?.description}
+                                        selected={currentIndex() == index()}
+                                        version={item.version}
+                                        ref={(el) => { refs[index()] = el }} />
+                                </ErrorBoundary>
                             }
                         </For>
                     </div>

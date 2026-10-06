@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, Index, Match, on, onCleanup, onMount, Show, Switch } from "solid-js"
+import { createEffect, createMemo, createSignal, ErrorBoundary, For, Index, Match, on, onCleanup, onMount, Show, Switch } from "solid-js"
 import SoftKey from "../components/SoftKey"
 import Loading from "../components/Loading"
 import AppItem from "../components/AppItem"
@@ -101,9 +101,11 @@ export default (props) => {
         setAppList(list)
     }
 
-    createEffect(on(installedAppList, (val) => {
+    // `defer: false` so the effect also runs when the list was already
+    // populated before this view mounted.
+    createEffect(on(installedAppList, () => {
         updateInstalledVersion()
-    }))
+    }, { defer: false }))
 
     onMount(async () => {
         focusManager.update()
@@ -208,14 +210,17 @@ export default (props) => {
                     <div>
                         <For each={appList()}>
                             {(item, index) =>
-                                <AppItem
-                                    iconSrc={item.iconSrc}
-                                    name={item.name}
-                                    desc={item.desc}
-                                    selected={currentIndex() == index()}
-                                    version={item.version}
-                                    installedVersion={() => item.installedVersion}
-                                    ref={(el) => { refs[index()] = el }} />
+                                // One broken entry must not take the whole list down.
+                                <ErrorBoundary fallback={<div class="p-[4px] text-[13px]">{String(item?.name)}: failed to display</div>}>
+                                    <AppItem
+                                        iconSrc={item.iconSrc}
+                                        name={item.name}
+                                        desc={item.desc}
+                                        selected={currentIndex() == index()}
+                                        version={item.version}
+                                        installedVersion={() => item.installedVersion}
+                                        ref={(el) => { refs[index()] = el }} />
+                                </ErrorBoundary>
                             }
                         </For>
                     </div>

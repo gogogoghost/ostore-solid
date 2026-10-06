@@ -6,12 +6,9 @@ const [installedAppList, setInstalledAppList] = createSignal([])
 // Blob URLs created for the icons of the current list, revoked on refresh.
 let iconUrls = []
 
-function iconMime(path) {
-    if (/\.svg$/i.test(path)) return 'image/svg+xml'
-    if (/\.jpe?g$/i.test(path)) return 'image/jpeg'
-    if (/\.webp$/i.test(path)) return 'image/webp'
-    return 'image/png'
-}
+// Last failure already reported to the user, so a refresh does not stack
+// alerts for the same problem.
+let reportedError = ''
 
 async function updateInstalledAppList() {
     try {
@@ -23,23 +20,43 @@ async function updateInstalledAppList() {
         iconUrls = []
 
         for (const item of res) {
-            item.iconSrc = '/kaios_56.png'
+            item.iconSrc = '/kaios_56.png' // OStore's own fallback asset
+            item.manifestObj = {} // so views can render even when the manifest is missing
+
+            // Vhost address of the application: packaged apps are served from
+            // `<name>.localhost/`, cached PWAs from `cached.localhost/<name>/`.
+            // The apps service reports the manifest URL, which carries both the
+            // host and the base path (the origin of a PWA is its remote URL and
+            // cannot be used here).
+            let location
             try {
-                const manifest = await getAppManifest(item.origin)
+                const url = new URL(item.manifest_url)
+                location = { host: url.host, base: url.pathname.replace(/\/[^/]*$/, '/') }
+            } catch (e) {
+                continue
+            }
+
+            try {
+                const manifest = await getAppManifest(item.manifest_url)
                 item.manifestObj = manifest
                 item.version = (manifest.b2g_features && manifest.b2g_features.version) || ''
 
-                let iconSrc = (manifest.icons && manifest.icons[0] && manifest.icons[0].src) || '/kaios_56.png'
-                if (iconSrc.startsWith('http')) {
-                    // Remote icon: the backend fetches it through the vhost.
-                    iconSrc = new URL(iconSrc).pathname
-                }
-                if (!iconSrc.startsWith('/')) {
-                    iconSrc = '/' + iconSrc
+                const iconPath = manifest.icons && manifest.icons[0] && manifest.icons[0].src
+                if (!iconPath) {
+                    continue // keep the fallback icon
                 }
 
-                const bytes = await getAppFile(item.origin, iconSrc)
-                const url = URL.createObjectURL(new Blob([bytes], { type: iconMime(iconSrc) }))
+                const resolved = iconPath.startsWith('http')
+                    ? new URL(iconPath).pathname
+                    : location.base + String(iconPath).replace(/^\//, '')
+
+                const mime = /\.svg$/i.test(resolved) ? 'image/svg+xml'
+                    : /\.jpe?g$/i.test(resolved) ? 'image/jpeg'
+                        : /\.webp$/i.test(resolved) ? 'image/webp'
+                            : 'image/png'
+
+                const bytes = await getAppFile(location.host, resolved)
+                const url = URL.createObjectURL(new Blob([bytes], { type: mime }))
                 iconUrls.push(url)
                 item.iconSrc = url
             } catch (e) {
@@ -48,8 +65,14 @@ async function updateInstalledAppList() {
         }
 
         setInstalledAppList(res)
+        reportedError = ''
     } catch (e) {
         console.error(e)
+        const message = (e && (e.message || String(e))) || 'unknown error'
+        if (message !== reportedError) {
+            reportedError = message
+            alert('Failed to load the application list: ' + message)
+        }
     }
 }
 
