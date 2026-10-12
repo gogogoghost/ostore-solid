@@ -2,11 +2,10 @@ import { createEffect, createMemo, createSignal, ErrorBoundary, For, Index, Matc
 import SoftKey from "../components/SoftKey"
 import Loading from "../components/Loading"
 import AppItem from "../components/AppItem"
-import { getAllList, getPopularList, install, resourceUrl, uninstall } from '../api';
+import { getAllList, getPopularList, installFromStore, resourceUrl, uninstall } from '../api';
 import { installedAppList, updateInstalledAppList } from "../store";
 import { register, unregister } from "../libs/KeyEventManager";
 import Dialog from "../components/Dialog";
-import { saveFile } from '../libs/utils.js'
 import { LinearFocusManager, Direction } from "../libs/LinearFocusManager";
 
 export default (props) => {
@@ -59,7 +58,7 @@ export default (props) => {
         if (!o.installedVersion) {
             return null
         }
-        if (o.id == "ostore") {
+        if (o.id == "ostore" || o.protected) {
             return null
         }
         return "Uninstall"
@@ -91,10 +90,12 @@ export default (props) => {
                     ? compareVersions(item.version, obj.version)
                     : null
                 item.manifestUrl = obj.manifest_url
+                item.protected = obj.protected
             } else {
                 item.installedVersion = null
                 item.versionState = null
                 item.manifestUrl = null
+                item.protected = false
             }
             list.push(item)
         }
@@ -149,13 +150,7 @@ export default (props) => {
         }
         try {
             setShowDialog(true)
-            setDialogMessage("Downloading...")
-            const res = await (await fetch(o.url)).blob()
-            const fullPath = await saveFile(res, o.fileName)
-
-            setDialogMessage("Installing...")
-            // alert(fullPath)
-            await install(fullPath)
+            await installFromStore(o, setDialogMessage)
 
             // refresh list
             updateInstalledAppList()

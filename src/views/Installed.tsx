@@ -46,7 +46,7 @@ export default () => {
         if (!o) {
             return null
         }
-        if (o.name == "ostore") {
+        if (o.name == "ostore" || o.protected) {
             return null
         }
         return "Uninstall"
