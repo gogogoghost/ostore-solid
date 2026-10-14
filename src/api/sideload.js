@@ -14,7 +14,7 @@ const SERVICE_SCRIPT = 'http://127.0.0.1/api/v1/sideload/service.js'
 
 let connectPromise = null
 
-function loadScript(src) {
+export function loadScript(src) {
   return new Promise((resolve, reject) => {
     if (document.querySelector(`script[src="${src}"]`)) {
       resolve()
