@@ -1,15 +1,16 @@
 // Backend facade.
 //
-// OStore prefers the Sideload remote service, then Flipfull's bridge, and falls
-// back to the legacy appscmd HTTP daemon, so a new OStore keeps working on systems
-// without either (and on systems where the application was not granted `sideload`).
+// Hosted JScalated packages use AppsManager. OStore ZIPs and manual installs
+// retain Sideload, Flipfull, and appscmd in their existing priority order.
 import * as http from './api'
 import * as sideload from './sideload'
 import * as flipfull from './flipfull'
+import * as appsmanager from './appsmanager'
 import { saveFile } from '../libs/utils.js'
 
-// Backend independent helpers (the store servers, not appscmd).
-export { getAllList, getPopularList, resourceUrl, baseUrl, proxyBaseUrl } from './api'
+export { getAllList, getPopularList, DEFAULT_SOURCES } from './catalog'
+export { resourceUrl, baseUrl, proxyBaseUrl } from './api'
+import { downloadOStorePackage } from './catalog'
 
 const backends = { sideload, flipfull, http }
 
@@ -19,7 +20,8 @@ export function getBackend() {
   return activeBackend
 }
 
-/// Detects Sideload, then Flipfull, once at startup; never throws, falls back to HTTP.
+// AppsManager connects when a hosted package is selected. Startup detection
+// retains the existing Sideload, then Flipfull, then HTTP order for ZIPs.
 export async function detectBackend() {
   for (const name of ['sideload', 'flipfull']) {
     try {
@@ -61,9 +63,16 @@ export function install(packagePath) {
   return run((backend) => backend.install(packagePath))
 }
 
-// Installs a store entry. Flipfull downloads it itself, the other backends get
-// a copy on the memory card. onStep(message) reports progress.
+// JScalated entries publish update manifests. OStore entries publish ZIPs:
+// Flipfull downloads those itself; the other backends use a local copy.
 export function installFromStore(item, onStep = () => {}) {
+  if (item.source === 'jscalated') {
+    onStep('Installing...')
+    if (item.installedVersion && item.manifestUrl) {
+      return appsmanager.updatePackage(item.installedUpdateUrl || item.updateUrl, item.manifestUrl)
+    }
+    return appsmanager.installPackage(item.updateUrl)
+  }
   let path = null
   return run(async (backend) => {
     if (backend.installFromStore) {
@@ -71,7 +80,7 @@ export function installFromStore(item, onStep = () => {}) {
     }
     if (!path) {
       onStep('Downloading...')
-      const res = await (await fetch(item.url)).blob()
+      const res = await downloadOStorePackage(item)
       path = await saveFile(res, item.fileName)
     }
     onStep('Installing...')

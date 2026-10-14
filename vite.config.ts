@@ -50,6 +50,8 @@ export default defineConfig(({ mode }) => {
             permissions: {
               "device-storage:sdcard": { access: "readwrite" },
               "systemXHR": {},
+              // Required by the api-daemon AppsManager service.
+              "webapps-manage": {},
               // App management through the Sideload remote service (systems
               // without the Sideload patch ignore the unknown permission).
               "sideload": {},
