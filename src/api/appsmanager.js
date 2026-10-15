@@ -179,3 +179,31 @@ export async function updatePackage(updateUrl, manifestUrl) {
   if (!available) throw new Error('No update is available at this app’s installed update URL')
   return callUrlMethod(manager, 'update', manifestUrl)
 }
+
+// AppsManager retains the source update URL when it installs a package. Look
+// up our own record rather than baking a release server into the application.
+export function findOwnApp(apps) {
+  return (apps || []).find(app => {
+    if (app?.origin === 'ostore') return true
+    const manifestUrl = app?.manifestUrl || app?.manifestURL
+    try { return new URL(manifestUrl).hostname === 'ostore.localhost' }
+    catch (_) { return false }
+  })
+}
+
+export async function checkOwnUpdateWithManager(manager, confirmUpdate) {
+  const own = findOwnApp(await manager.getAll())
+  if (!own) return false
+  const updateUrl = own.updateUrl || own.updateURL
+  const manifestUrl = own.manifestUrl || own.manifestURL
+  if (!updateUrl || !manifestUrl) return false
+  lastDownloadFailure = null
+  const available = await callUrlMethod(manager, 'checkForUpdate', updateUrl, [{ autoInstall: false }])
+  if (!available || !confirmUpdate('An OStore update is available. Install it now?')) return false
+  await callUrlMethod(manager, 'update', manifestUrl)
+  return true
+}
+
+export async function checkOwnUpdate(confirmUpdate = message => globalThis.confirm(message)) {
+  return checkOwnUpdateWithManager(await connect(), confirmUpdate)
+}

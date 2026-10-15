@@ -46,7 +46,10 @@ export default defineConfig(({ mode }) => {
             }
           ],
           b2g_features: {
-            // type: "privileged",
+            // AppsManager requires a core app. The working JScalated Store
+            // declares this alongside webapps-manage in both manifests.
+            type: "web",
+            core: true,
             permissions: {
               "device-storage:sdcard": { access: "readwrite" },
               "systemXHR": {},

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { getAllList, getPopularList, DEFAULT_SOURCES } from '../src/api/catalog.js'
-import { callUrlMethod, errorText } from '../src/api/appsmanager.js'
+import { callUrlMethod, checkOwnUpdateWithManager, errorText, findOwnApp } from '../src/api/appsmanager.js'
 
 const pages = 'https://Garbagebuild.github.io/JScalated-Store/'
 const ostore = 'https://dl-ostore.yexm.eu.org/'
@@ -139,5 +139,36 @@ try {
 } finally {
   globalThis.lib_apps = originalLibApps
 }
+
+assert.equal(findOwnApp([
+  { origin: 'other', manifestUrl: 'http://other.localhost/manifest.webmanifest' },
+  { origin: 'ostore', manifestUrl: 'http://ostore.localhost/manifest.webmanifest' },
+]).origin, 'ostore')
+assert.equal(findOwnApp([{ manifestURL: 'http://ostore.localhost/manifest.webmanifest' }])
+  .manifestURL, 'http://ostore.localhost/manifest.webmanifest')
+assert.equal(findOwnApp([{ origin: 'other' }]), undefined)
+
+const selfCalls = []
+const self = {
+  origin: 'ostore',
+  updateUrl: 'http://phone-host/update.webmanifest',
+  manifestUrl: 'http://ostore.localhost/manifest.webmanifest',
+}
+const selfManager = {
+  getAll: async () => [self],
+  checkForUpdate: async (url, options) => {
+    selfCalls.push(['check', url, options])
+    return true
+  },
+  update: async url => { selfCalls.push(['update', url]); return self },
+}
+assert.equal(await checkOwnUpdateWithManager(selfManager, () => true), true)
+assert.deepEqual(selfCalls, [
+  ['check', self.updateUrl, { autoInstall: false }],
+  ['update', self.manifestUrl],
+])
+selfCalls.length = 0
+assert.equal(await checkOwnUpdateWithManager(selfManager, () => false), false)
+assert.equal(selfCalls.length, 1, 'Declining self-update must not call update')
 
 console.log('Catalog isolation and AppsManager argument handling passed')
