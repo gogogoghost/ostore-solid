@@ -19,6 +19,7 @@ try {
   globalThis.fetch = async url => {
     if (url === pages + 'webapps.json') {
       return response({ schema: 1, apps: [
+        { folder: 'JScalated-Store', name: 'JScalated Store', version: '1.2.4' },
         { folder: 'Example', name: 'Example', version: '2.0', description: 'Sample' },
       ] })
     }

@@ -1,6 +1,6 @@
 # Summary
 
-This branch is based on `gogogoghost/ostore-solid` master at `db4a0286ad8848fb7da6b52d75a1946b0c090336` (2026-10-14), including the new Flipfull backend. The upstream package is version 1.2.2. This test build identifies itself as 1.2.4 so an installed 1.2.3 package can request an update. The app's visible JSX and CSS are unchanged.
+This branch is based on `gogogoghost/ostore-solid` master at `db4a0286ad8848fb7da6b52d75a1946b0c090336` (2026-10-14), including the new Flipfull backend. The upstream package is version 1.2.2. This GitHub release build identifies itself as 1.2.6. The app's visible JSX and CSS are unchanged.
 
 ## Catalogues
 
@@ -11,6 +11,8 @@ The built-in list has exactly two sources:
 
 Both load independently. A failure in one source leaves the other available. Duplicate app IDs prefer the JScalated entry because it provides an AppsManager update manifest. OStore's download host lacks the CORS headers needed for ordinary browser fetch responses, so only OStore requests use `mozSystem` XMLHttpRequest as a fallback.
 
+The JScalated Store app listing is excluded because OStore replaces it. The other apps in the JScalated GitHub catalogue remain available. The hosted catalogue also lists OStore so a new device can install it using its own AppsManager update manifest.
+
 ## Install paths
 
 - JScalated apps call AppsManager `installPackage(updateUrl)` or, for an installed app, `checkForUpdate` followed by `update(manifestUrl)`.
@@ -18,7 +20,7 @@ Both load independently. A failure in one source leaves the other available. Dup
 - OStore's API publishes raw ZIP downloads, not AppsManager update manifests. Those entries retain the existing Sideload, Flipfull, and appscmd install paths. Flipfull stages the URL itself; the other two use a local download. Manual ZIP installs continue through those backends too.
 - The legacy appscmd HTTP fallback now uses a scoped system XMLHttpRequest on KaiOS. It no longer changes `window.fetch` for the entire app.
 - The package and update manifests declare `b2g_features.type: "web"`, `core: true`, and `webapps-manage`, matching the working JScalated Store permission tier. An earlier OStore 1.2.3 package declared the permission without `core: true`; on the test handset AppsManager returned “missing permission” when OStore itself tried to install an app.
-- On launch, packaged OStore uses AppsManager to find its own installed `updateUrl`, checks it for a newer package, and asks before updating itself. This uses the URL recorded at installation. The current LAN test URL requires the computer server to be reachable; a future internet release needs a stable HTTPS update source.
+- On launch, packaged OStore uses AppsManager to find its own installed `updateUrl`, checks it for a newer package, and asks before updating itself. New GitHub installs use `https://garbagebuild.github.io/JScalated-Store/Apps-directory/OStore/update.webmanifest` as their recorded update source, so future updates can use the same URL. A phone already installed from the earlier LAN update URL may still have that URL recorded; this build alone cannot change the older install's recorded source before it runs. A one-time migration on the handset remains unverified.
 
 ## Build and checks
 
@@ -28,4 +30,4 @@ The build ZIP is unsigned. The companion ZIP produced by the JScalated Python si
 
 # Conclusion
 
-The source and build contain the two catalogues, both install paths, and a self-update check. Version 1.2.3 installed on the test handset but lacked the privilege tier needed to call AppsManager from inside OStore. Version 1.2.4 handset installation and app installs remain to be verified.
+The source and build contain the two catalogues, both install paths, and a self-update check. Version 1.2.3 installed on the test handset but lacked the privilege tier needed to call AppsManager from inside OStore. The 1.2.6 GitHub package and self-update path still need handset verification.

@@ -69,7 +69,10 @@ async function loadJScalated() {
   if (catalog?.schema !== 1 || !Array.isArray(catalog.apps) || catalog.apps.length > 200) {
     throw new Error('Unsupported JScalated webapps.json')
   }
-  const results = await Promise.allSettled(catalog.apps.map(async (entry) => {
+  // OStore replaces the older JScalated Store app, while its GitHub feed
+  // remains a source for the other hosted packages.
+  const entries = catalog.apps.filter(entry => entry?.folder !== 'JScalated-Store')
+  const results = await Promise.allSettled(entries.map(async (entry) => {
     if (typeof entry?.folder !== 'string' || !safeName.test(entry.folder) ||
         typeof entry.name !== 'string' || typeof entry.version !== 'string') {
       throw new Error('Invalid JScalated catalogue entry')

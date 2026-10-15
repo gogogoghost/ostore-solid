@@ -10,6 +10,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
+  const appVersion = env.VITE_APP_VERSION || '1.2.6';
   return {
     plugins: [
       unocssPlugin(),
@@ -59,7 +60,7 @@ export default defineConfig(({ mode }) => {
               // without the Sideload patch ignore the unknown permission).
               "sideload": {},
             },
-            version: env.VITE_APP_VERSION,
+            version: appVersion,
             origin: "ostore"
           }
         }
