@@ -10,6 +10,7 @@ import { saveFile } from '../libs/utils.js'
 
 export { getAllList, getPopularList, DEFAULT_SOURCES } from './catalog'
 export { resourceUrl, baseUrl, proxyBaseUrl } from './api'
+export { errorText } from './appsmanager'
 import { downloadOStorePackage } from './catalog'
 
 const backends = { sideload, flipfull, http }

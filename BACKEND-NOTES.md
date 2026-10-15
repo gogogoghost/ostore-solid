@@ -1,6 +1,6 @@
 # Summary
 
-This branch is based on `gogogoghost/ostore-solid` master at `db4a0286ad8848fb7da6b52d75a1946b0c090336` (2026-10-14), including the new Flipfull backend. The live OStore package was version 1.2.1. This build identifies itself as 1.2.2. The app's visible JSX and CSS are unchanged.
+This branch is based on `gogogoghost/ostore-solid` master at `db4a0286ad8848fb7da6b52d75a1946b0c090336` (2026-10-14), including the new Flipfull backend. The upstream package is version 1.2.2. This test build identifies itself as 1.2.3 so an installed 1.2.2 package can request an update. The app's visible JSX and CSS are unchanged.
 
 ## Catalogues
 

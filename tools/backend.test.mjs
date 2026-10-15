@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { getAllList, getPopularList, DEFAULT_SOURCES } from '../src/api/catalog.js'
-import { callUrlMethod } from '../src/api/appsmanager.js'
+import { callUrlMethod, errorText } from '../src/api/appsmanager.js'
 
 const pages = 'https://Garbagebuild.github.io/JScalated-Store/'
 const ostore = 'https://dl-ostore.yexm.eu.org/'
@@ -125,6 +125,19 @@ for (const message of ['INVALID_SIGNATURE', 'NETWORK_FAILURE', 'Timed out']) {
   const manager = { installPackage() { calls++; throw new Error(message) } }
   await assert.rejects(callUrlMethod(manager, 'installPackage', updateUrl), /./)
   assert.equal(calls, 1, `Do not repeat a service action after ${message}`)
+}
+
+const originalLibApps = globalThis.lib_apps
+try {
+  globalThis.lib_apps = { AppsServiceError: { INVALID_SIGNATURE: 14 } }
+  assert.equal(errorText({ value: 14 }), 'INVALID_SIGNATURE')
+  assert.equal(errorText({ value: { error: 14 }, reason: 'package rejected' }),
+    'INVALID_SIGNATURE: package rejected')
+  assert.equal(errorText(14), 'INVALID_SIGNATURE')
+  assert.equal(errorText(new Error('connection lost')), 'connection lost')
+  assert.equal(errorText(undefined), 'AppsManager returned no error details')
+} finally {
+  globalThis.lib_apps = originalLibApps
 }
 
 console.log('Catalog isolation and AppsManager argument handling passed')

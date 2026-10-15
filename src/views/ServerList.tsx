@@ -2,7 +2,7 @@ import { createEffect, createMemo, createSignal, ErrorBoundary, For, Index, Matc
 import SoftKey from "../components/SoftKey"
 import Loading from "../components/Loading"
 import AppItem from "../components/AppItem"
-import { getAllList, getPopularList, installFromStore, uninstall } from '../api';
+import { errorText, getAllList, getPopularList, installFromStore, uninstall } from '../api';
 import { installedAppList, updateInstalledAppList } from "../store";
 import { register, unregister } from "../libs/KeyEventManager";
 import Dialog from "../components/Dialog";
@@ -163,7 +163,7 @@ export default (props) => {
         } catch (e) {
             // SecurityError
             console.error(e)
-            alert(e.message)
+            alert(`Install failed: ${errorText(e, o.source === 'jscalated')}`)
         } finally {
             setShowDialog(false)
         }

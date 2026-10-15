@@ -14,6 +14,52 @@ const REQUEST_FIELDS = {
 
 let managerPromise = null
 const scriptPromises = new Map()
+let lastDownloadFailure = null
+
+// AppsManager can reject with an AppsServiceError value rather than an Error.
+// Match the JScalated website helper so the phone displays the service code
+// instead of alerting an undefined .message.
+function describeError(error) {
+  const value = error?.value
+  const code = [error, value, value?.error, error?.code, error?.error]
+    .find(candidate => typeof candidate === 'number')
+  const names = globalThis.lib_apps?.AppsServiceError
+  const name = code === undefined ? '' : Object.keys(names || {})
+    .find(key => names[key] === code) || `code ${code}`
+  const details = [name, error?.reason, error?.message,
+    typeof value === 'string' ? value : '']
+    .filter(part => part !== undefined && part !== null && part !== '')
+    .map(String)
+  if (details.length) return [...new Set(details)].join(': ')
+  if (typeof error === 'string' && error) return error
+  if (error && typeof error === 'object') {
+    try {
+      const json = JSON.stringify(error)
+      if (json && json !== '{}') return json
+    } catch (_) { /* Use the fallback below for cyclic service objects. */ }
+  }
+  return 'AppsManager returned no error details'
+}
+
+export function errorText(error, includeDownloadFailure = false) {
+  const detail = describeError(error)
+  if (!includeDownloadFailure || lastDownloadFailure === null) return detail
+  const downloadDetail = describeError(lastDownloadFailure)
+  return downloadDetail === detail ? detail : `${detail}; download failed: ${downloadDetail}`
+}
+
+function watchDownloadFailures(manager) {
+  if (typeof manager?.addEventListener !== 'function' ||
+      manager.APP_DOWNLOAD_FAILED_EVENT === undefined) return
+  try {
+    manager.addEventListener(manager.APP_DOWNLOAD_FAILED_EVENT, event => {
+      lastDownloadFailure = event?.reason ?? event?.value ?? event
+      console.warn('[ostore] AppsManager download failed:', event)
+    })
+  } catch (error) {
+    console.warn('[ostore] AppsManager download event unavailable:', error)
+  }
+}
 
 function loadScript(path) {
   if (scriptPromises.has(path)) return scriptPromises.get(path)
@@ -50,7 +96,10 @@ async function connect() {
         settled = true
         clearTimeout(timer)
         if (error) reject(error)
-        else resolve(manager)
+        else {
+          watchDownloadFailures(manager)
+          resolve(manager)
+        }
       }
       try {
         session.open('websocket', 'localhost', token, {
@@ -114,6 +163,7 @@ export function callUrlMethod(manager, method, rawUrl, rest = []) {
 export async function probe() { return connect() }
 export async function getAll() { return (await connect()).getAll() }
 export async function installPackage(updateUrl) {
+  lastDownloadFailure = null
   return callUrlMethod(await connect(), 'installPackage', updateUrl)
 }
 export async function installPWA(manifestUrl) {
@@ -123,6 +173,7 @@ export async function uninstall(manifestUrl) {
   return callUrlMethod(await connect(), 'uninstall', manifestUrl)
 }
 export async function updatePackage(updateUrl, manifestUrl) {
+  lastDownloadFailure = null
   const manager = await connect()
   const available = await callUrlMethod(manager, 'checkForUpdate', updateUrl, [{ autoInstall: false }])
   if (!available) throw new Error('No update is available at this app’s installed update URL')
