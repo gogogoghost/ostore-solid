@@ -10,6 +10,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
+  const appVersion = env.VITE_APP_VERSION || '1.2.6';
   return {
     plugins: [
       unocssPlugin(),
@@ -46,15 +47,20 @@ export default defineConfig(({ mode }) => {
             }
           ],
           b2g_features: {
-            // type: "privileged",
+            // AppsManager requires a core app. The working JScalated Store
+            // declares this alongside webapps-manage in both manifests.
+            type: "web",
+            core: true,
             permissions: {
               "device-storage:sdcard": { access: "readwrite" },
               "systemXHR": {},
+              // Required by the api-daemon AppsManager service.
+              "webapps-manage": {},
               // App management through the Sideload remote service (systems
               // without the Sideload patch ignore the unknown permission).
               "sideload": {},
             },
-            version: env.VITE_APP_VERSION,
+            version: appVersion,
             origin: "ostore"
           }
         }

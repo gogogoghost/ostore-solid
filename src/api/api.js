@@ -1,40 +1,44 @@
-const originFetch = window.fetch
-
-window.fetch = function () {
-    const args = [...arguments]
-    const patch = { mode: 'no-cors' }
-    if (args[1]) {
-        Object.assign(args[1], patch)
-    } else {
-        args.push(patch)
-    }
-    return originFetch(...args)
-}
-
 export const baseUrl = import.meta.env.VITE_APPSCMD_BASEURL
 
 export const resourceUrl = import.meta.env.VITE_SERVER_DL
 
+// The legacy local appscmd backend uses system-level XHR. Catalogue requests
+// are handled separately in catalog.js.
+function request(path, options = {}) {
+    const url = new URL(path, baseUrl).href
+    if (typeof XMLHttpRequest !== 'function' || typeof navigator === 'undefined' || !navigator.b2g) {
+        return fetch(url, options)
+    }
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest({ mozSystem: true })
+        xhr.open(options.method || 'GET', url, true)
+        xhr.responseType = 'arraybuffer'
+        for (const [name, value] of Object.entries(options.headers || {})) {
+            xhr.setRequestHeader(name, value)
+        }
+        xhr.onload = () => resolve({
+            ok: xhr.status >= 200 && xhr.status < 300,
+            status: xhr.status,
+            json: async () => JSON.parse(new TextDecoder().decode(xhr.response)),
+            arrayBuffer: async () => xhr.response,
+        })
+        xhr.onerror = () => reject(new Error('appscmd request failed: ' + path))
+        xhr.send(options.body || null)
+    })
+}
+
 export async function getList() {
-    const res = await (await fetch(baseUrl + "list")).json()
+    const res = await (await request("list")).json()
     if (res.code != 0) {
         throw new Error(res.msg)
     }
     return res.data
 }
 
-export async function getAllList() {
-    return await (await fetch(resourceUrl + "all.json")).json()
-}
-
-export async function getPopularList() {
-    return await (await fetch(resourceUrl + "popular.json")).json()
-}
-
 export const proxyBaseUrl = baseUrl + "proxy/"
 
 export async function install(path) {
-    const res = await (await fetch(baseUrl + "install", {
+    const res = await (await request("install", {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -48,7 +52,7 @@ export async function install(path) {
 }
 
 export async function installPWA(path) {
-    const res = await (await fetch(baseUrl + "install-pwa", {
+    const res = await (await request("install-pwa", {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -62,7 +66,7 @@ export async function installPWA(path) {
 }
 
 export async function uninstall(manifestUrl) {
-    const res = await (await fetch(baseUrl + "uninstall", {
+    const res = await (await request("uninstall", {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -84,7 +88,7 @@ function proxyUrl(origin, path) {
 }
 
 export async function getAppFile(origin, path) {
-    const res = await fetch(proxyUrl(origin, path))
+    const res = await request(proxyUrl(origin, path))
     if (!res.ok) {
         throw new Error("HTTP " + res.status)
     }
@@ -94,7 +98,7 @@ export async function getAppFile(origin, path) {
 export async function getAppManifest(origin) {
     for (const name of ['manifest.webmanifest', 'manifest.webapp']) {
         try {
-            const res = await fetch(proxyUrl(origin, '/' + name))
+            const res = await request(proxyUrl(origin, '/' + name))
             if (!res.ok) {
                 continue
             }

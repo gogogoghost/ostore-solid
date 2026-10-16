@@ -2,7 +2,7 @@ import { createEffect, createMemo, createSignal, ErrorBoundary, For, Index, Matc
 import SoftKey from "../components/SoftKey"
 import Loading from "../components/Loading"
 import AppItem from "../components/AppItem"
-import { getAllList, getPopularList, installFromStore, resourceUrl, uninstall } from '../api';
+import { errorText, getAllList, getPopularList, installFromStore, uninstall } from '../api';
 import { installedAppList, updateInstalledAppList } from "../store";
 import { register, unregister } from "../libs/KeyEventManager";
 import Dialog from "../components/Dialog";
@@ -83,18 +83,22 @@ export default (props) => {
         const list = []
         for (const srcItem of appList()) {
             const item = { ...srcItem }
-            const obj = installedAppList().find(o => o.name == item.id)
+            const obj = installedAppList().find(o =>
+                o.name == item.id || o.name == item.name ||
+                (item.origin && o.origin == item.origin) ||
+                (item.updateUrl && o.update_url == item.updateUrl))
             if (obj) {
-                item.installedVersion = obj.version
+                item.installedVersion = obj.version || 'Installed'
                 item.versionState = (typeof item.version === 'string' && typeof obj.version === 'string')
-                    ? compareVersions(item.version, obj.version)
-                    : null
+                    && obj.version ? compareVersions(item.version, obj.version) : 0
                 item.manifestUrl = obj.manifest_url
+                item.installedUpdateUrl = obj.update_url
                 item.protected = obj.protected
             } else {
                 item.installedVersion = null
                 item.versionState = null
                 item.manifestUrl = null
+                item.installedUpdateUrl = null
                 item.protected = false
             }
             list.push(item)
@@ -113,11 +117,6 @@ export default (props) => {
         setLoading(true)
         try {
             const res = await (props.all ? getAllList() : getPopularList())
-            for (const item of res) {
-                item.iconSrc = resourceUrl + item.icon
-                item.fileName = item.id + '_' + item.version + '.zip'
-                item.url = resourceUrl + item.fileName
-            }
             setAppList(res)
             if (installedAppList().length > 0) {
                 updateInstalledVersion()
@@ -164,7 +163,7 @@ export default (props) => {
         } catch (e) {
             // SecurityError
             console.error(e)
-            alert(e.message)
+            alert(`Install failed: ${errorText(e, o.source === 'jscalated')}`)
         } finally {
             setShowDialog(false)
         }
