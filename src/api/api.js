@@ -2,8 +2,8 @@ export const baseUrl = import.meta.env.VITE_APPSCMD_BASEURL
 
 export const resourceUrl = import.meta.env.VITE_SERVER_DL
 
-// Only the legacy local appscmd API needs system-level cross-origin access.
-// Keep this scoped here so public catalogue fetches retain readable responses.
+// The legacy local appscmd backend uses system-level XHR. Catalogue requests
+// are handled separately in catalog.js.
 function request(path, options = {}) {
     const url = new URL(path, baseUrl).href
     if (typeof XMLHttpRequest !== 'function' || typeof navigator === 'undefined' || !navigator.b2g) {
@@ -13,7 +13,6 @@ function request(path, options = {}) {
         const xhr = new XMLHttpRequest({ mozSystem: true })
         xhr.open(options.method || 'GET', url, true)
         xhr.responseType = 'arraybuffer'
-        xhr.timeout = 15000
         for (const [name, value] of Object.entries(options.headers || {})) {
             xhr.setRequestHeader(name, value)
         }
@@ -24,7 +23,6 @@ function request(path, options = {}) {
             arrayBuffer: async () => xhr.response,
         })
         xhr.onerror = () => reject(new Error('appscmd request failed: ' + path))
-        xhr.ontimeout = () => reject(new Error('appscmd request timed out: ' + path))
         xhr.send(options.body || null)
     })
 }
