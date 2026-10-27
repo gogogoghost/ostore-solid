@@ -7,7 +7,7 @@ import { Router, Route } from "@solidjs/router";
 
 import Index from './routes/Index'
 import { updateInstalledAppList } from "./store";
-import { detectBackend } from "./api";
+import { detectInstallMode } from "./api";
 import { checkOwnUpdate, errorText } from "./api/appsmanager";
 import SelectFile from "./routes/SelectFile";
 
@@ -19,7 +19,7 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   );
 }
 
-detectBackend().then(updateInstalledAppList);
+detectInstallMode().then(updateInstalledAppList);
 
 // Check for our own update after startup. A failure leaves the store usable;
 // the next launch can retry when its installed update server is reachable.

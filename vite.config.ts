@@ -69,11 +69,6 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       proxy: {
-        '/proxy': {
-          target: 'https://dl-ostore.yexm.eu.org/',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/proxy/, ''),
-        },
         '/appscmd': {
           target: 'http://127.0.0.1:5431/',
           changeOrigin: true,

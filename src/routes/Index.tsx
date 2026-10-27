@@ -1,12 +1,10 @@
-import { createSignal, Match, onCleanup, onMount, Switch } from "solid-js";
+import { Match, Switch } from "solid-js";
 import Tab from "../components/Tab";
 import Title from "../components/Title";
-import { useLocation } from "@solidjs/router";
 import ServerList from "../views/ServerList";
 import Installed from "../views/Installed";
 import Manual from "../views/Manual";
 import About from "../views/About";
-import { register, unregister } from "../libs/KeyEventManager";
 import { createPersistenceSignal } from "../libs/Signal";
 
 

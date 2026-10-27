@@ -1,30 +1,21 @@
+import { systemFetch } from '../libs/systemFetch.js'
+
 export const baseUrl = import.meta.env.VITE_APPSCMD_BASEURL
 
-export const resourceUrl = import.meta.env.VITE_SERVER_DL
-
-// The legacy local appscmd backend uses system-level XHR. Catalogue requests
-// are handled separately in catalog.js.
-function request(path, options = {}) {
+// The legacy local appscmd backend. Catalogue requests go straight to the
+// OStore host in catalog.js; this client only serves manual ZIP installs and
+// the installed-app list on devices carrying the daemon.
+async function request(path, options = {}) {
     const url = new URL(path, baseUrl).href
-    if (typeof XMLHttpRequest !== 'function' || typeof navigator === 'undefined' || !navigator.b2g) {
-        return fetch(url, options)
-    }
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest({ mozSystem: true })
-        xhr.open(options.method || 'GET', url, true)
-        xhr.responseType = 'arraybuffer'
-        for (const [name, value] of Object.entries(options.headers || {})) {
-            xhr.setRequestHeader(name, value)
+    try {
+        const response = await systemFetch(url, options)
+        if (response.type === 'opaque') {
+            throw new Error('request was blocked')
         }
-        xhr.onload = () => resolve({
-            ok: xhr.status >= 200 && xhr.status < 300,
-            status: xhr.status,
-            json: async () => JSON.parse(new TextDecoder().decode(xhr.response)),
-            arrayBuffer: async () => xhr.response,
-        })
-        xhr.onerror = () => reject(new Error('appscmd request failed: ' + path))
-        xhr.send(options.body || null)
-    })
+        return response
+    } catch (error) {
+        throw new Error(`appscmd request failed: ${path} (${(error && error.message) || error})`)
+    }
 }
 
 export async function getList() {
@@ -35,7 +26,12 @@ export async function getList() {
     return res.data
 }
 
-export const proxyBaseUrl = baseUrl + "proxy/"
+export async function probe() {
+    await getList()
+    return true
+}
+
+const proxyBaseUrl = baseUrl + "proxy/"
 
 export async function install(path) {
     const res = await (await request("install", {
@@ -81,24 +77,28 @@ export async function uninstall(manifestUrl) {
 
 // --- installed app content (the HTTP proxy of the legacy appscmd daemon) ---
 
-function proxyUrl(origin, path) {
-    const host = String(origin).replace(/^https?:\/\//, '').replace(/\/+$/, '')
-    const suffix = path.startsWith('/') ? path : '/' + path
-    return proxyBaseUrl + host + suffix
+function proxyTarget(target, path = '') {
+    const source = new URL(/^https?:\/\//.test(target) ? target : 'http://' + target)
+    const suffix = path || source.pathname
+    return proxyBaseUrl + source.host + (suffix.startsWith('/') ? suffix : '/' + suffix)
 }
 
 export async function getAppFile(origin, path) {
-    const res = await request(proxyUrl(origin, path))
+    const res = await request(proxyTarget(origin, path))
     if (!res.ok) {
         throw new Error("HTTP " + res.status)
     }
     return new Uint8Array(await res.arrayBuffer())
 }
 
-export async function getAppManifest(origin) {
-    for (const name of ['manifest.webmanifest', 'manifest.webapp']) {
+export async function getAppManifest(target) {
+    // The caller may pass a bare host or the installed manifest URL.
+    const urls = /^https?:\/\//.test(target)
+        ? [proxyTarget(target)]
+        : ['manifest.webmanifest', 'manifest.webapp'].map(name => proxyTarget(target, name))
+    for (const url of urls) {
         try {
-            const res = await request(proxyUrl(origin, '/' + name))
+            const res = await request(url)
             if (!res.ok) {
                 continue
             }
@@ -107,5 +107,5 @@ export async function getAppManifest(origin) {
             // try the next manifest name
         }
     }
-    throw new Error("unable to read manifest of " + origin)
+    throw new Error("unable to read manifest of " + target)
 }

@@ -6,6 +6,8 @@
 // permission; every entry point throws (with `kaiExtUnavailable = true`) when
 // the service cannot be reached so the facade in ./index.js falls back to HTTP.
 
+import { loadScript } from '../libs/loadScript.js'
+
 const SHARED_SCRIPTS = [
   'http://127.0.0.1/api/v1/shared/core.js',
   'http://127.0.0.1/api/v1/shared/session.js',
@@ -13,20 +15,6 @@ const SHARED_SCRIPTS = [
 const SERVICE_SCRIPT = 'http://127.0.0.1/api/v1/sideload/service.js'
 
 let connectPromise = null
-
-export function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve()
-      return
-    }
-    const script = document.createElement('script')
-    script.src = src
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error('failed to load ' + src))
-    document.head.appendChild(script)
-  })
-}
 
 function describe(error) {
   if (!error) return 'unknown error'
@@ -44,7 +32,7 @@ function describe(error) {
 // failures (a failed install must not be retried over HTTP).
 function isUnavailable(error) {
   const text = describe(error)
-  return /MissingPermission|UnknownService|FingerprintMismatch|session_closed|session (timeout|error|closed)|externalapi|failed to load|lib_(session|sideload) missing/i.test(text)
+  return /MissingPermission|UnknownService|FingerprintMismatch|session_closed|session (timeout|error|closed)|externalapi|could not load|timed out loading|lib_(session|sideload) missing/i.test(text)
 }
 
 function unavailableError(error) {

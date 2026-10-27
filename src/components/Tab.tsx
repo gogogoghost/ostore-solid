@@ -1,7 +1,6 @@
-import { createEffect, For, Index, onCleanup, onMount } from "solid-js"
+import { Index, onCleanup, onMount } from "solid-js"
 import styles from './Tab.module.scss'
 import { Direction, LinearFocusManager } from "../libs/LinearFocusManager";
-import { useLocation } from "@solidjs/router";
 
 export default (props) => {
     const refs: HTMLElement[] = [];
@@ -15,16 +14,6 @@ export default (props) => {
     onMount(() => {
         focusManager.update(refs, props.current)
     })
-    // onMount(() => {
-    //     const location = useLocation()
-    //     const hash = decodeURI(location.hash)
-    //     for (let i = 0; i < tabList.length; i++) {
-    //         if ('#' + tabList[i] == hash) {
-    //             focusManager.focusIndex(i)
-    //             break
-    //         }
-    //     }
-    // })
     onCleanup(() => {
         focusManager.clean()
     })

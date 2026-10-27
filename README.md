@@ -12,8 +12,16 @@ This app is built into the system image of [nokia 2780 flip](https://github.com/
 
 ## Where are the apps from?
 
+The OStore catalogue at `https://dl-ostore.yexm.eu.org/` is the only source.
+
 - My porting and packaging
 - Uploads by authors
+
+OStore does not read a third-party catalogue. Every listed app has a stable
+`<id>_update.webmanifest` pointer, and OStore installs the signed variant
+(`<id>_update_JscalatedSigned.webmanifest`) through KaiOS `AppsManager`.
+AppsManager records that URL, so later launches can check the same source for
+updates.
 
 ## How to upload your app
 
@@ -33,17 +41,41 @@ But for the first version you have to send the zip file and the DER format ed255
 
 I will publish your first version and then you can upgrade by yourself.
 
-## JScalated catalogue entries
+The publishing service rebuilds the catalogue, the unsigned update pointer, and
+the signed update pointer. See the companion `ostore-worker` repository for the
+artifact layout and retention rules.
 
-The JScalated GitHub catalogue is a separate source from the OStore API above.
-Packaged entries normally install from their `Apps-directory/<folder>/update.webmanifest`.
-For a newly listed app whose developer maintains updates, the catalogue may
-provide a stable HTTPS `update_url`; AppsManager installs from that URL, which
-the device retains for later update checks. Existing entries keep their current
-update URLs.
+## Install modes
 
-A hosted app may instead use `type: "pwa"`, its exact `id`, and a public HTTPS
-`manifest_url`. OStore reads that manifest and installs it with
-`AppsManager.installPwa`. The catalogue folder supplies a 56×56 icon. This
-path needs no application ZIP or ED25519 key. The contribution and verification
-requirements are in the JScalated Store repository's `SOURCES-AND-UPDATES.md`.
+On first launch OStore probes the four install backends and saves the first
+available one:
+
+1. `AppsManager` - installs the signed `*_JscalatedSigned.webmanifest` pointer.
+2. `Sideload` - installs the unsigned `<id>_<version>.zip`.
+3. `Flipfull` - installs the unsigned ZIP through its bridge.
+4. `appscmd` - installs the unsigned ZIP through the local daemon.
+
+The choice is stored in `localStorage`; later launches use it directly. If a
+saved mode reports that its service is unavailable, OStore falls back to the
+next mode and saves the new choice. The About tab shows the current mode,
+detected availability, and a "Detect again" action; pressing Enter on a mode
+switches to it immediately.
+
+A ZIP on the memory card always uses an available local mode (Sideload,
+Flipfull, or appscmd) because AppsManager cannot install a local file. A PWA
+URL under Manual Install uses the active mode when it supports `installPwa`.
+
+Network requests use `fetch(..., { mode: 'no-cors' })`. On KaiOS 3 the
+`systemXHR` permission makes that a readable privileged response, which is
+required because the OStore download host does not send CORS headers.
+
+## Development
+
+```bash
+cp .env.example .env
+bun install
+bun run dev
+```
+
+`bun run test` runs the catalogue and AppsManager unit checks. `./build.sh`
+produces `dist/ostore.zip` with `manifest.webmanifest` at the ZIP root.

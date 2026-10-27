@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, ErrorBoundary, For, Index, Match, on, onCleanup, onMount, Show, Switch } from "solid-js"
+import { createEffect, createMemo, createSignal, ErrorBoundary, For, Match, on, onCleanup, onMount, Show, Switch } from "solid-js"
 import SoftKey from "../components/SoftKey"
 import Loading from "../components/Loading"
 import AppItem from "../components/AppItem"
@@ -65,32 +65,33 @@ export default (props) => {
     })
 
     const compareVersions = (version1, version2) => {
-        const v1 = String(version1 ?? '').split('.').map(Number);
-        const v2 = String(version2 ?? '').split('.').map(Number);
-
-        for (let i = 0; i < 3; i++) {
-            if (v1[i] > v2[i]) {
-                return 1;
-            }
-            if (v1[i] < v2[i]) {
-                return -1;
+        const v1 = String(version1 ?? '').split('.')
+        const v2 = String(version2 ?? '').split('.')
+        const length = Math.max(v1.length, v2.length)
+        for (let i = 0; i < length; i++) {
+            const left = parseInt(v1[i] ?? '0', 10) || 0
+            const right = parseInt(v2[i] ?? '0', 10) || 0
+            if (left !== right) {
+                return left > right ? 1 : -1
             }
         }
-        return 0;
+        return 0
     }
 
     const updateInstalledVersion = () => {
         const list = []
         for (const srcItem of appList()) {
             const item = { ...srcItem }
-            const obj = installedAppList().find(o =>
-                o.name == item.id || o.name == item.name ||
-                (item.origin && o.origin == item.origin) ||
-                (item.updateUrl && o.update_url == item.updateUrl))
+            const obj = installedAppList().find(o => {
+                const installedId = String(o.id || o.name || '').toLowerCase()
+                return installedId === item.id.toLowerCase() || o.name === item.name ||
+                    (item.updateUrl && o.update_url == item.updateUrl) ||
+                    (item.signedUpdateUrl && o.update_url == item.signedUpdateUrl)
+            })
             if (obj) {
                 item.installedVersion = obj.version || 'Installed'
-                item.versionState = (typeof item.version === 'string' && typeof obj.version === 'string')
-                    && obj.version ? compareVersions(item.version, obj.version) : 0
+                item.versionState = typeof item.version === 'string' && obj.version
+                    ? compareVersions(item.version, obj.version) : 0
                 item.manifestUrl = obj.manifest_url
                 item.installedUpdateUrl = obj.update_url
                 item.protected = obj.protected
@@ -163,7 +164,7 @@ export default (props) => {
         } catch (e) {
             // SecurityError
             console.error(e)
-            alert(`Install failed: ${errorText(e, o.source === 'jscalated')}`)
+            alert(`Install failed: ${errorText(e, true)}`)
         } finally {
             setShowDialog(false)
         }

@@ -2,7 +2,8 @@
 //
 // On a TCL Flip 4 with Flipfull, OStore installs through Flipfull's bridge
 // service. Flipfull downloads the zip itself and checks it before installing.
-import { loadScript } from './sideload'
+import { loadScript } from '../libs/loadScript.js'
+import { systemFetch } from '../libs/systemFetch.js'
 
 const SCRIPTS = [
   'http://127.0.0.1/api/v1/shared/core.js',
@@ -56,15 +57,15 @@ async function store(...words) {
   }
 }
 
-function get(url, responseType) {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest({ mozSystem: true })
-    xhr.open('GET', url)
-    xhr.responseType = responseType
-    xhr.onload = () => (xhr.status == 200 ? resolve(xhr.response) : reject(new Error('HTTP ' + xhr.status)))
-    xhr.onerror = () => reject(new Error('failed to load ' + url))
-    xhr.send()
-  })
+async function get(url, responseType) {
+  const res = await systemFetch(url)
+  if (res.type === 'opaque') {
+    throw new Error('request was blocked')
+  }
+  if (!res.ok) {
+    throw new Error('HTTP ' + res.status)
+  }
+  return responseType === 'json' ? res.json() : res.arrayBuffer()
 }
 
 export async function probe() {
@@ -86,13 +87,6 @@ export async function getList() {
   })
 }
 
-export async function installFromStore(url, id, onStep) {
-  onStep('Downloading...')
-  await store('stage', url)
-  onStep('Installing...')
-  return store('install', id, url)
-}
-
 export async function install(path) {
   const staged = await store('stage-file', path)
   const line = staged.split('\n').find((l) => l.startsWith('origin\t'))
@@ -100,6 +94,13 @@ export async function install(path) {
     throw new Error("Can't tell which app this zip is: its manifest has no origin and more than one name")
   }
   return store('install', line.slice('origin\t'.length), 'sdcard')
+}
+
+export async function installFromStore(url, id, onStep) {
+  onStep('Downloading...')
+  await store('stage', url)
+  onStep('Installing...')
+  return store('install', id, url)
 }
 
 export async function installPWA(manifestUrl) {

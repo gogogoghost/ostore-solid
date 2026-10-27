@@ -1,7 +1,6 @@
-import { createSignal, For, onMount } from "solid-js"
+import { createSignal, For, onMount, Show } from "solid-js"
 import SoftKey from "../components/SoftKey"
 import Title from "../components/Title"
-import { Show } from "solid-js"
 import Loading from "../components/Loading"
 import styles from './SelectFile.module.scss'
 import cogBox from '../assets/cog-box.svg'

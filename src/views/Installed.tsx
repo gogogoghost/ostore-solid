@@ -1,9 +1,8 @@
-import { createEffect, createMemo, createSignal, ErrorBoundary, For, Index, Match, on, onCleanup, onMount, Show, Switch } from "solid-js"
+import { createEffect, createMemo, createSignal, ErrorBoundary, For, Match, on, onCleanup, onMount, Show, Switch } from "solid-js"
 import Loading from "../components/Loading"
 import AppItem from "../components/AppItem"
 import SoftKey from "../components/SoftKey"
 import { installedAppList, updateInstalledAppList } from "../store"
-import { register, unregister } from "../libs/KeyEventManager"
 import { uninstall } from '../api'
 import { LinearFocusManager, Direction } from "../libs/LinearFocusManager"
 
@@ -31,22 +30,18 @@ export default () => {
         })
     }, { defer: false }))
 
+    const isOStore = (app) => String(app?.id || app?.name || '').toLowerCase() === 'ostore'
+
     const leftText = createMemo(() => {
         const o = appList()[currentIndex()]
-        if (!o) {
-            return null
-        }
-        if (o.name == "ostore") {
+        if (!o || isOStore(o)) {
             return null
         }
         return o?.manifest_url ? 'Launch' : null
     })
     const rightText = createMemo(() => {
         const o = appList()[currentIndex()]
-        if (!o) {
-            return null
-        }
-        if (o.name == "ostore" || o.protected) {
+        if (!o || isOStore(o) || o.protected) {
             return null
         }
         return "Uninstall"

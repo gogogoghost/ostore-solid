@@ -2,7 +2,7 @@ import { createSignal, onCleanup, onMount } from 'solid-js'
 import sytles from './Manual.module.scss'
 import { register, unregister } from '../libs/KeyEventManager'
 import { LinearFocusManager, Direction } from '../libs/LinearFocusManager'
-import { installPWA } from '../api'
+import { MODES, getInstallMode, installPWA } from '../api'
 import { useNavigate } from '@solidjs/router'
 
 export default () => {
@@ -33,7 +33,13 @@ export default () => {
         navigate("/SelectFile")
     }
 
+    const modeLabel = () => {
+        const selected = MODES.find(item => item.id === getInstallMode())
+        return selected ? selected.label : getInstallMode()
+    }
+
     return <div class="p-8px">
+        <div class="text-12px color-gray pb-4px">Install backend: {modeLabel()} (change in About)</div>
         <div class={sytles.label}>Install app from sdcard</div>
         <button ref={el => refs[0] = el} onclick={goSelectFile}>Select File</button>
 

@@ -69,7 +69,7 @@ async function updateInstalledAppList() {
     } catch (e) {
         console.error(e)
         const message = (e && (e.message || String(e))) || 'unknown error'
-        if (/^appscmd request failed: list$/.test(message)) {
+        if (/^appscmd request failed: list\b/.test(message)) {
             // appscmd is optional; keep the store usable without a startup popup.
             setInstalledAppList([])
             return
