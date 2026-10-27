@@ -69,6 +69,9 @@ export function install(packagePath) {
 export function installFromStore(item, onStep = () => {}) {
   if (item.source === 'jscalated') {
     onStep('Installing...')
+    if (item.installKind === 'pwa') {
+      return appsmanager.installPWA(item.pwaManifestUrl)
+    }
     if (item.installedVersion && item.manifestUrl) {
       return appsmanager.updatePackage(item.installedUpdateUrl || item.updateUrl, item.manifestUrl)
     }

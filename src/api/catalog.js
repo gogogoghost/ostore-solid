@@ -10,6 +10,24 @@ const JSCALATED_BASE = 'https://Garbagebuild.github.io/JScalated-Store/'
 const OSTORE_BASE = 'https://dl-ostore.yexm.eu.org/'
 const safeName = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 
+// A developer may host a stable update manifest for a newly listed app. The
+// installed app keeps this URL, so later releases do not need a Store rebuild.
+function stableHttpsUrl(value) {
+  if (typeof value !== 'string' || !value || /[\\\s]/.test(value)) {
+    throw new Error('Invalid app URL')
+  }
+  const url = new URL(value)
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
+    throw new Error('App URL must be a stable HTTPS URL')
+  }
+  return url.href
+}
+
+export function resolveUpdateUrl(entry, appBase) {
+  const fallback = `${appBase}update.webmanifest`
+  return entry.update_url === undefined ? fallback : stableHttpsUrl(entry.update_url)
+}
+
 function xhrRead(url, kind) {
   return new Promise((resolve, reject) => {
     if (typeof XMLHttpRequest !== 'function') {
@@ -39,12 +57,32 @@ function xhrRead(url, kind) {
   })
 }
 
-async function fetchRead(url, kind) {
-  const response = await fetch(url, { cache: 'no-store' })
+async function fetchRead(url, kind, signal) {
+  const response = await fetch(url, { cache: 'no-store', signal })
   if (!response.ok || response.type === 'opaque') {
     throw new Error(`HTTP ${response.status} at ${url}`)
   }
   return kind === 'blob' ? response.blob() : response.json()
+}
+
+async function developerVersion(updateUrl, origin, fallback) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 8000)
+  try {
+    const update = await fetchRead(updateUrl, 'json', controller.signal)
+    if (update?.b2g_features?.origin !== origin) {
+      throw new Error('Developer update origin differs from the listed app')
+    }
+    if (typeof update.version !== 'string' || !safeName.test(update.version)) {
+      throw new Error('Invalid developer update version')
+    }
+    return update.version
+  } catch (error) {
+    console.warn('[ostore] developer update manifest unavailable:', updateUrl, error)
+    return fallback
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 async function readOStore(url, kind) {
@@ -79,6 +117,32 @@ async function loadJScalated() {
     }
     const folder = encodeURIComponent(entry.folder)
     const appBase = `${JSCALATED_BASE}Apps-directory/${folder}/`
+    if (entry.type === 'pwa') {
+      const pwaManifestUrl = stableHttpsUrl(entry.manifest_url)
+      const pwaManifest = await fetchRead(pwaManifestUrl, 'json')
+      const id = pwaManifest?.id
+      if (typeof id !== 'string' || !safeName.test(id)) {
+        throw new Error('Invalid hosted app ID')
+      }
+      if (id.toLowerCase() !== String(entry.id || '').toLowerCase()) {
+        throw new Error('Hosted app ID differs from the approved catalogue entry')
+      }
+      const liveVersion = pwaManifest?.b2g_features?.version
+      return {
+        id: id.toLowerCase(),
+        name: entry.name,
+        desc: String(entry.description || pwaManifest?.description || ''),
+        version: typeof liveVersion === 'string' && safeName.test(liveVersion)
+          ? liveVersion : entry.version,
+        iconSrc: `${appBase}icon-56.png`,
+        source: 'jscalated',
+        installKind: 'pwa',
+        pwaManifestUrl,
+      }
+    }
+    if (entry.type !== undefined && entry.type !== 'packaged') {
+      throw new Error('Unsupported JScalated app type')
+    }
     const manifestUrl = `${appBase}manifest.webmanifest`
     let manifest = {}
     try { manifest = await fetchRead(manifestUrl, 'json') }
@@ -87,15 +151,19 @@ async function loadJScalated() {
     const iconSrc = typeof iconPath === 'string' && iconPath
       ? new URL(iconPath.replace(/^\/+/, ''), appBase).href
       : '/kaios_56.png'
+    const origin = String(manifest.b2g_features?.origin || '')
+    const updateUrl = resolveUpdateUrl(entry, appBase)
     return {
       id: String(manifest.id || manifest.b2g_features?.origin || entry.folder).toLowerCase(),
       name: entry.name,
       desc: String(entry.description || ''),
-      version: entry.version,
+      version: entry.update_url
+        ? await developerVersion(updateUrl, origin, entry.version)
+        : entry.version,
       iconSrc,
       source: 'jscalated',
-      origin: String(manifest.b2g_features?.origin || ''),
-      updateUrl: `${appBase}update.webmanifest`,
+      origin,
+      updateUrl,
     }
   }))
   return results.filter(result => result.status === 'fulfilled').map(result => result.value)

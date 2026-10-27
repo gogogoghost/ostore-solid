@@ -32,3 +32,18 @@ POST multipart/form-data
 But for the first version you have to send the zip file and the DER format ed25519 public key to my email: **jaxyang39@gmail.com**.
 
 I will publish your first version and then you can upgrade by yourself.
+
+## JScalated catalogue entries
+
+The JScalated GitHub catalogue is a separate source from the OStore API above.
+Packaged entries normally install from their `Apps-directory/<folder>/update.webmanifest`.
+For a newly listed app whose developer maintains updates, the catalogue may
+provide a stable HTTPS `update_url`; AppsManager installs from that URL, which
+the device retains for later update checks. Existing entries keep their current
+update URLs.
+
+A hosted app may instead use `type: "pwa"`, its exact `id`, and a public HTTPS
+`manifest_url`. OStore reads that manifest and installs it with
+`AppsManager.installPwa`. The catalogue folder supplies a 56×56 icon. This
+path needs no application ZIP or ED25519 key. The contribution and verification
+requirements are in the JScalated Store repository's `SOURCES-AND-UPDATES.md`.
