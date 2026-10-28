@@ -4,6 +4,7 @@ import Title from "../components/Title";
 import ServerList from "../views/ServerList";
 import Installed from "../views/Installed";
 import Manual from "../views/Manual";
+import Settings from "../views/Settings";
 import About from "../views/About";
 import { createPersistenceSignal } from "../libs/Signal";
 
@@ -31,6 +32,9 @@ export default () => {
                     <Manual />
                 </Match>
                 <Match when={tabIndex() == 4}>
+                    <Settings />
+                </Match>
+                <Match when={tabIndex() == 5}>
                     <About />
                 </Match>
             </Switch>

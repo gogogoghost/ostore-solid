@@ -1,10 +1,10 @@
 // Install backends. AppsManager installs the signed store package; the other
 // modes install the unsigned ZIP through their local service.
 export const MODES = Object.freeze([
-  Object.freeze({ id: 'appsmanager', label: 'AppsManager', detail: 'Signed store packages only' }),
-  Object.freeze({ id: 'sideload', label: 'Sideload', detail: 'Unsigned ZIP via the Sideload patch' }),
-  Object.freeze({ id: 'flipfull', label: 'Flipfull', detail: 'Unsigned ZIP via the Flipfull bridge' }),
-  Object.freeze({ id: 'appscmd', label: 'appscmd', detail: 'Unsigned ZIP via the local daemon' }),
+  Object.freeze({ id: 'appsmanager', label: 'AppsManager' }),
+  Object.freeze({ id: 'sideload', label: 'Sideload' }),
+  Object.freeze({ id: 'flipfull', label: 'Flipfull' }),
+  Object.freeze({ id: 'appscmd', label: 'appscmd' }),
 ])
 
 export const MODE_IDS = Object.freeze(MODES.map(mode => mode.id))

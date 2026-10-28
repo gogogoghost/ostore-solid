@@ -78,8 +78,8 @@ async function probeAll() {
   return activeMode
 }
 
-// A saved mode is used directly on later launches; only the first launch, or
-// an explicit re-detect from Settings, probes the backends.
+// Every launch probes the backends, so restarting OStore is how a user
+// re-detects them. A saved mode is kept when it is still available.
 export function detectInstallMode(force = false) {
   if (!force && detected) return Promise.resolve(activeMode)
   if (!force && restoreMode()) return Promise.resolve(activeMode)
@@ -206,7 +206,7 @@ export function install(packagePath) {
   const detected = order.some(mode => mode === activeMode || availableModes.includes(mode))
   if (availableModes.length && !detected) {
     return Promise.reject(new Error(
-      'AppsManager cannot install a local ZIP. Select Sideload, Flipfull, or appscmd in About.'))
+      'AppsManager cannot install a local ZIP. Select Sideload, Flipfull, or appscmd in Settings.'))
   }
   return runMethod('install', [packagePath], order)
 }

@@ -5,7 +5,7 @@ import { Direction, LinearFocusManager } from "../libs/LinearFocusManager";
 export default (props) => {
     const refs: HTMLElement[] = [];
 
-    const tabList = ['Popular', 'All', 'Installed', 'Manual Install', 'About']
+    const tabList = ['Popular', 'All', 'Installed', 'Manual Install', 'Settings', 'About']
 
     const focusManager = new LinearFocusManager(Direction.Horizontal, true, (index) => {
         props.onIndexChange(index)

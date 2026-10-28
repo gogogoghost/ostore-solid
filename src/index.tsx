@@ -19,7 +19,10 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   );
 }
 
-detectInstallMode().then(updateInstalledAppList);
+// Restarting the app is the way to re-detect: probe every backend on launch.
+updateInstalledAppList();
+detectInstallMode(true).catch(error =>
+  console.warn('[ostore] install mode detection failed:', error));
 
 // Check for our own update after startup. A failure leaves the store usable;
 // the next launch can retry when its installed update server is reachable.

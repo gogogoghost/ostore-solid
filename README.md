@@ -47,19 +47,19 @@ artifact layout and retention rules.
 
 ## Install modes
 
-On first launch OStore probes the four install backends and saves the first
-available one:
+On every launch OStore probes the four install backends. It keeps the saved
+mode when it is still detected and otherwise takes the first available one:
 
 1. `AppsManager` - installs the signed `*_JscalatedSigned.webmanifest` pointer.
 2. `Sideload` - installs the unsigned `<id>_<version>.zip`.
 3. `Flipfull` - installs the unsigned ZIP through its bridge.
 4. `appscmd` - installs the unsigned ZIP through the local daemon.
 
-The choice is stored in `localStorage`; later launches use it directly. If a
-saved mode reports that its service is unavailable, OStore falls back to the
-next mode and saves the new choice. The About tab shows the current mode,
-detected availability, and a "Detect again" action; pressing Enter on a mode
-switches to it immediately.
+The choice is stored in `localStorage` and preferred while it stays detected.
+If a saved mode reports that its service is unavailable, OStore falls back to
+the next mode and saves the new choice. The Settings tab shows the current mode
+and detected availability; pressing Enter on a mode switches to it
+immediately. Restart OStore to run detection again.
 
 A ZIP on the memory card always uses an available local mode (Sideload,
 Flipfull, or appscmd) because AppsManager cannot install a local file. A PWA

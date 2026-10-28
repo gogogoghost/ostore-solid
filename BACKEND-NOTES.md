@@ -35,7 +35,7 @@ parsed as empty data.
 ## Install modes
 
 `src/api/modes.js` owns the mode list, `localStorage` persistence, and the
-fallback loop. `src/api/index.js` probes all four backends on first launch:
+fallback loop. `src/api/index.js` probes all four backends on every launch:
 
 | Mode | Catalogue install | Manual ZIP |
 | --- | --- | --- |
@@ -44,10 +44,10 @@ fallback loop. `src/api/index.js` probes all four backends on first launch:
 | `flipfull` | unsigned ZIP, bridge stages the URL | supported |
 | `appscmd` | unsigned ZIP, local install | supported |
 
-The first detected mode is saved with the detected list. Later launches read
-that state instead of probing. A service-level unavailability error (missing
-permission, absent scripts, dead session, refused daemon) drops the failing
-mode, tries the next one, and saves the result. Real operation errors such as
+The detected list and preferred mode are saved; each launch re-probes and
+keeps the saved mode while it is still detected. A service-level
+unavailability error (missing permission, absent scripts, dead session, refused
+daemon) drops the failing mode, tries the next one, and saves the result. Real operation errors such as
 an invalid ZIP are reported without retrying another backend.
 
 Catalogue installs choose the signed or unsigned package from the mode. In
@@ -60,8 +60,9 @@ older record.
 Manual ZIPs always use a local mode. Manual PWA installs and uninstalls use the
 active mode first, then the remaining detected modes.
 
-The About tab lists the modes, shows whether each was detected, allows
-selecting one, and re-runs detection.
+The Settings tab lists the modes, shows whether each was detected, and allows
+selecting one; detection runs on every launch, so restart OStore to re-detect.
+About keeps the app version information.
 - The AppsManager adapter probes the firmware's generated URL encoder to choose
   a string or `URL` argument, and retries only an explicit argument-type error.
   Service, network, signature, and timeout errors are not repeated.
