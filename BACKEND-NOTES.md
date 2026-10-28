@@ -50,12 +50,18 @@ unavailability error (missing permission, absent scripts, dead session, refused
 daemon) drops the failing mode, tries the next one, and saves the result. Real operation errors such as
 an invalid ZIP are reported without retrying another backend.
 
-Catalogue installs choose the signed or unsigned package from the mode. In
-AppsManager mode, a fresh install calls `installPackage(signedUpdateUrl)`; an
-installed app whose recorded URL is the same signed pointer and whose catalogue
-version is newer uses `checkForUpdate` then `update(manifestUrl)`. Every other
-installed state reinstalls from the signed pointer, which also migrates an
-older record.
+Catalogue entries are matched to installed apps by the apps-service name or
+origin host, then by update URL; when several records match, the one installed
+from the signed pointer wins. In AppsManager mode a fresh install calls
+`installPackage(signedUpdateUrl)`; an installed record from the same signed
+pointer with a newer catalogue version shows `Upgrade` and uses
+`checkForUpdate` then `update(manifestUrl)`. `InstallPackage` refuses a URL
+that is already installed (`REINSTALL_FORBIDDEN`) and the firmware only marks an
+update available for a newer version, so same-version and downgrade actions are
+not offered. A newer version installed from another source shows `Migrate`: it
+installs the signed package as a second copy, and the prompt asks the user to
+remove the old copy from the Launcher afterwards because its local data is
+removed. Local modes keep Install/Reinstall/Upgrade/Downgrade.
 
 Manual ZIPs always use a local mode. Manual PWA installs and uninstalls use the
 active mode first, then the remaining detected modes.

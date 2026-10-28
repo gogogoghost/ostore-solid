@@ -2,7 +2,8 @@ import { createEffect, createMemo, createSignal, ErrorBoundary, For, Match, on, 
 import SoftKey from "../components/SoftKey"
 import Loading from "../components/Loading"
 import AppItem from "../components/AppItem"
-import { errorText, getAllList, getPopularList, installFromStore, uninstall } from '../api';
+import { errorText, getAllList, getInstallMode, getPopularList, installFromStore, uninstall } from '../api';
+import { bestCatalogueMatch, catalogueAction } from '../libs/appMatch'
 import { installedAppList, updateInstalledAppList } from "../store";
 import { register, unregister } from "../libs/KeyEventManager";
 import Dialog from "../components/Dialog";
@@ -36,19 +37,7 @@ export default (props) => {
     })
     const enterText = createMemo(() => {
         const o = appList()[currentIndex()]
-        if (!o) {
-            return null
-        }
-        if (!o.installedVersion) {
-            return "Install"
-        }
-        if (o.versionState == -1) {
-            return "Downgrade"
-        } else if (o.versionState == 0) {
-            return "Reinstall"
-        } else if (o.versionState == 1) {
-            return "Upgrade"
-        }
+        return o ? catalogueAction(o, getInstallMode()) : null
     })
     const rightText = createMemo(() => {
         const o = appList()[currentIndex()]
@@ -82,12 +71,7 @@ export default (props) => {
         const list = []
         for (const srcItem of appList()) {
             const item = { ...srcItem }
-            const obj = installedAppList().find(o => {
-                const installedId = String(o.id || o.name || '').toLowerCase()
-                return installedId === item.id.toLowerCase() || o.name === item.name ||
-                    (item.updateUrl && o.update_url == item.updateUrl) ||
-                    (item.signedUpdateUrl && o.update_url == item.signedUpdateUrl)
-            })
+            const obj = bestCatalogueMatch(item, installedAppList())
             if (obj) {
                 item.installedVersion = obj.version || 'Installed'
                 item.versionState = typeof item.version === 'string' && obj.version
@@ -145,7 +129,11 @@ export default (props) => {
 
     const handleInstall = async () => {
         const o = appList()[currentIndex()]
-        if (!window.confirm(`Confirm to install ${o.name} ${o.version}?`)) {
+        const action = enterText()
+        const message = action === 'Migrate'
+            ? `${o.name} cannot be updated in place. ${o.version} will be installed as a second copy; remove the old copy from the Launcher afterwards. Its local data will be deleted.`
+            : `Confirm to install ${o.name} ${o.version}?`
+        if (!window.confirm(message)) {
             return
         }
         try {
@@ -155,7 +143,9 @@ export default (props) => {
             // refresh list
             updateInstalledAppList()
             // show alert
-            if (o.id == "ostore") {
+            if (action === 'Migrate') {
+                alert("Install Successful")
+            } else if (o.id == "ostore") {
                 alert("Install Successful. OStore will restart automatically")
                 window.location.reload();
             } else {
