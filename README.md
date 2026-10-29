@@ -18,10 +18,10 @@ The OStore catalogue at `https://dl-ostore.yexm.eu.org/` is the only source.
 - Uploads by authors
 
 OStore does not read a third-party catalogue. Every listed app has a stable
-`<id>_update.webmanifest` pointer, and OStore installs the signed variant
-(`<id>_update_JscalatedSigned.webmanifest`) through KaiOS `AppsManager`.
-AppsManager records that URL, so later launches can check the same source for
-updates.
+`<id>_update.webmanifest` pointer; AppsManager mode installs the signed variant
+(`<id>_update_JscalatedSigned.webmanifest`) and the system records that URL, so
+later update checks use the same source. Local modes install the unsigned
+`<id>_<version>.zip`.
 
 ## How to upload your app
 
@@ -47,23 +47,41 @@ artifact layout and retention rules.
 
 ## Install modes
 
-On every launch OStore probes the four install backends. It keeps the saved
-mode when it is still detected and otherwise takes the first available one:
+OStore probes all four backends on every launch, keeps the saved mode while it
+is still detected, otherwise uses the first detected one (canonical order
+below), and keeps the last backend (`appscmd`) for a retry when none is
+detected. The choice is stored in `localStorage`; Settings shows the current
+mode and detected backends, with undetected rows dimmed and skipped. Restart
+OStore to probe again.
 
-1. `AppsManager` - installs the signed `*_JscalatedSigned.webmanifest` pointer.
-2. `Sideload` - installs the unsigned `<id>_<version>.zip`.
-3. `Flipfull` - installs the unsigned ZIP through its bridge.
-4. `appscmd` - installs the unsigned ZIP through the local daemon.
+| Mode | Catalogue entry | Manual tab |
+| --- | --- | --- |
+| `AppsManager` | signed update manifest (`package_path` → ZIP) | PWA manifest URL |
+| `Sideload` | unsigned `<id>_<version>.zip` | local ZIP or PWA URL |
+| `Flipfull` | unsigned `<id>_<version>.zip` via its bridge | local ZIP or PWA URL |
+| `appscmd` | unsigned `<id>_<version>.zip` via the local daemon | local ZIP or PWA URL |
 
-The choice is stored in `localStorage` and preferred while it stays detected.
-If a saved mode reports that its service is unavailable, OStore falls back to
-the next mode and saves the new choice. The Settings tab shows the current mode
-and detected availability; pressing Enter on a mode switches to it
-immediately. Restart OStore to run detection again.
+AppsManager installs a catalogue entry with `installPackage`: the signed update
+manifest names the ZIP in `package_path`, and the ZIP and its signature are
+downloaded. The Manual tab's URL field is passed to `installPwa`, which installs
+a hosted PWA manifest and does not read `package_path`; a manifest that points
+to a ZIP is an update manifest and OStore uses it for catalogue entries.
 
-A ZIP on the memory card always uses an available local mode (Sideload,
-Flipfull, or appscmd) because AppsManager cannot install a local file. A PWA
-URL under Manual Install uses the active mode when it supports `installPwa`.
+AppsManager records the signed pointer as the app's update URL. It can update
+only an app installed from that same pointer: the catalogue offers `Upgrade`
+when its version is higher. A newer version installed from another source
+offers `Migrate`, which installs the signed package as a second copy; remove the
+old copy from the Launcher afterwards (its local data is deleted). Same-version
+and downgrade actions are not offered: the system refuses `installPackage` for
+an already-installed update URL and only allows `update` to a newer version.
+
+Local modes install the catalogue's unsigned ZIP and overwrite an existing
+app, so they offer Reinstall, Downgrade, and Upgrade. A ZIP on the memory card
+always uses a local mode because AppsManager cannot install local files. A URL
+under Manual Install is installed as a PWA through the active mode.
+
+If a running operation reports that its service is unavailable, OStore drops
+that mode, tries the next one, and saves the result.
 
 Network requests use `fetch(..., { mode: 'no-cors' })`. On KaiOS 3 the
 `systemXHR` permission makes that a readable privileged response, which is
@@ -77,5 +95,6 @@ bun install
 bun run dev
 ```
 
-`bun run test` runs the catalogue and AppsManager unit checks. `./build.sh`
-produces `dist/ostore.zip` with `manifest.webmanifest` at the ZIP root.
+`bun run test` runs the catalogue, install-mode, AppsManager, and matching
+checks. `./build.sh` produces `dist/ostore.zip` with `manifest.webmanifest` at
+the ZIP root.
